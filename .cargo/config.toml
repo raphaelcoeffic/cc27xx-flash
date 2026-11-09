@@ -1,0 +1,10 @@
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+rustflags = [
+  "-C", "link-arg=--nmagic",
+  "-C", "link-arg=-Tlink.x",
+  "-C", "link-arg=-Tmemory.x",
+  "-C", "force-frame-pointers=no",
+]
+
+[build]
+target = "thumbv7m-none-eabi"

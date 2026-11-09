@@ -1,0 +1,28 @@
+[package]
+name = "cc27xx-flash"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/raphaelcoeffic/cc27xx-flash"
+license = "MIT OR Apache-2.0"
+description = "probe-rs flash algorithm for the TI CC27xx (CC2745, CC2755)"
+
+[dependencies]
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+flash-algorithm = { version = "0.7.0", default-features = false, features = ["panic-handler"] }
+
+[[bin]]
+name = "cc27xx-flash"
+test = false
+bench = false
+
+[profile.dev]
+codegen-units = 1
+debug = 2
+incremental = false
+opt-level = 's'
+
+[profile.release]
+codegen-units = 1
+debug = 2
+lto = "fat"
+opt-level = 's'
