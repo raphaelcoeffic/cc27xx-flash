@@ -9,6 +9,7 @@ description = "probe-rs flash algorithm for the TI CC27xx (CC2745, CC2755)"
 [dependencies]
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 flash-algorithm = { version = "0.7.0", default-features = false, features = ["panic-handler"] }
+md-5 = { version = "0.10.6", default-features = false }
 
 [[bin]]
 name = "cc27xx-flash"

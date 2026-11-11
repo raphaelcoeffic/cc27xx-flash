@@ -4,11 +4,15 @@
 //! Erase and program go through the flash functions of the boot ROM (driverlib `hapi.h`).
 //! The CCFG is erased and written only when it differs from the image. The boot ROM can't
 //! write the SCFG: programming it fails unless the device already holds the image's SCFG.
+//!
+//! `VendorFunc_Signatures_md5` lets probe-rs compare flash ranges by their MD5 instead of reading
+//! them back.
 
 #![no_std]
 #![no_main]
 
 use flash_algorithm::*;
+use md5::{Digest, Md5};
 
 struct Algorithm {
     /// VIMS:CCHCTL before the cache was turned off.
@@ -76,6 +80,38 @@ fn program(address: u32, data: &[u8]) -> Result<(), ErrorCode> {
 fn holds(address: u32, data: &[u8]) -> bool {
     let flash = unsafe { core::slice::from_raw_parts(address as *const u8, data.len()) };
     flash == data
+}
+
+/// A signature table entry holds data, and its signature is valid.
+const SIGNED: u32 = 0;
+/// A signature table entry is erased, and has no signature.
+const EMPTY: u32 = 1;
+/// A signature table entry: address, size, status, then the 16-byte MD5.
+const ENTRY_WORDS: usize = 7;
+
+/// Signs `count` entries of the table at `table`, and returns how many it signed.
+///
+/// # Safety
+///
+/// `table` must point to `count` entries, and each entry to readable memory.
+#[no_mangle]
+#[inline(never)]
+#[link_section = ".entry.VendorFunc_Signatures_md5"]
+pub unsafe extern "C" fn VendorFunc_Signatures_md5(table: *mut u32, count: u32) -> u32 {
+    let entries = core::slice::from_raw_parts_mut(table, count as usize * ENTRY_WORDS);
+    for entry in entries.chunks_exact_mut(ENTRY_WORDS) {
+        let data = core::slice::from_raw_parts(entry[0] as *const u8, entry[1] as usize);
+        if data.iter().all(|&byte| byte == 0xFF) {
+            entry[2] = EMPTY;
+            continue;
+        }
+        let digest = Md5::digest(data);
+        entry[2] = SIGNED;
+        for (word, bytes) in entry[3..].iter_mut().zip(digest.chunks_exact(4)) {
+            *word = u32::from_le_bytes(bytes.try_into().unwrap());
+        }
+    }
+    count
 }
 
 fn wait_vims() {

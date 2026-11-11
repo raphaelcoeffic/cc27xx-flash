@@ -11,6 +11,9 @@ the device from booting. The boot ROM can't write the SCFG: programming it fails
 0x5CF6_0000 unless the device already holds the image's SCFG. Only SACI writes it, after
 a chip erase. There is no chip erase either.
 
+`VendorFunc_Signatures_md5` signs flash ranges with MD5, so probe-rs compares them without
+reading them back (`--preverify`, `--verify`).
+
 ## Building
 
 ```sh
