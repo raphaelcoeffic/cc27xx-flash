@@ -51,6 +51,11 @@ const CCFG_START: u32 = 0x4E02_0000;
 const SCFG_START: u32 = 0x4E04_0000;
 const SCFG_SIZE: usize = 0x400;
 
+/// `FAPI_STATUS_FSM_ERROR`: the flash state machine failed the erase or program.
+const FAPI_STATUS_FSM_ERROR: u32 = 4;
+/// FLASH:STATCMD, which tells why the flash state machine failed.
+const FLASH_STATCMD: *const u32 = 0x4002_13D0 as *const u32;
+
 /// Returned when the image's SCFG differs from the device's.
 const ERROR_SCFG_CHANGED: u32 = 0x5CF6_0000;
 
@@ -58,7 +63,16 @@ fn hapi_function(index: usize) -> usize {
     unsafe { HAPI_TABLE.add(index).read_volatile() }
 }
 
+/// Turns a boot ROM status into a result. On `FAPI_STATUS_FSM_ERROR`, the error holds
+/// FLASH:STATCMD instead, when it is set.
 fn status(status: u32) -> Result<(), ErrorCode> {
+    let status = match status {
+        FAPI_STATUS_FSM_ERROR => match unsafe { FLASH_STATCMD.read_volatile() } {
+            0 => status,
+            statcmd => statcmd,
+        },
+        _ => status,
+    };
     match ErrorCode::new(status) {
         None => Ok(()),
         Some(error) => Err(error),
